@@ -307,9 +307,17 @@ class TaskManager:
             if task.future.cancelled():
                 task.set_running_or_notify_cancel()
             elif result.status == ResultStatus.SUCCESS:
-                task.future.set_result(result.value)
+                result_value = result.value
+                del result.value  # Delete the result value to avoid potentially holding on to large results
+                task.future.set_result(result_value)
             else:
-                task.future.set_exception(result.value)
+                result_value = result.value
+                del result.value  # Delete the result value to avoid potentially holding on to large results
+                task.future.set_exception(result_value)
+
+            # Delete references ASAP
+            del task
+            del result
 
             self.task_done_callback()
 
@@ -432,6 +440,7 @@ def worker_process(params: Worker, channel: WorkerChannel):
     try:
         for task in worker_get_next_task(channel, params.max_tasks):
             payload = task.payload
+            del task.payload  # Delete the payload in the Task to avoid potentially holding on to large arguments
             result = process_execute(
                 payload.function, *payload.args, **payload.kwargs)
             send_result(channel, TaskResult(task.id, result))

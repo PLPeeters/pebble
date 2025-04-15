@@ -188,6 +188,7 @@ def get_next_task(context: PoolContext, max_tasks: int):
 
 def execute_next_task(task: Task):
     payload = task.payload
+    del task.payload  # Delete the payload in the Task to avoid potentially holding on to large arguments
     task.timestamp = time.time()
     task.set_running_or_notify_cancel()
 
